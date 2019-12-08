@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="theme-color" content="#000000"/>
+    <meta
+            name="description"
+            content="Web site created using create-react-app"
+    />
+    <title>Chat</title>
+    <script>
+        function join() {
+            const joinname = document.getElementById("joinname").value
+            fetch("http://localhost:8080/user/" + joinname, {method: 'PUT', credentials: 'include'})
+                .catch(err => {
+                    console.log(err);
+                    alert(err)
+                })
+                .then(res => openWebSocket())
+        }
+
+        let socket
+        let connected = false
+
+        function openWebSocket() {
+            socket = new WebSocket("ws://localhost:8080/chat")
+            socket.onopen = function(e) {
+                connected = true
+                alert("[open] Connection established");
+            };
+
+            socket.onmessage = function(event) {
+                addChatMsg(event.data)
+            };
+
+            socket.onclose = function(event) {
+                if (event.wasClean) {
+                    alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                } else {
+                    // e.g. server process killed or network down
+                    // event.code is usually 1006 in this case
+                    alert('[close] Connection died');
+                }
+            };
+
+            socket.onerror = function(error) {
+                alert(`[error] ${error.message}`);
+            };
+        }
+
+        function fetchSessionName() {
+            fetch("http://localhost:8080/user", {credentials: 'include'})
+                .catch(err => {
+                    console.log(err);
+                    alert(err)
+                })
+                .then(res => res.text().then(sessionName => document.getElementById("sessionname").innerText = sessionName))
+        }
+
+        function send() {
+            if(connected) {
+                socket.send(document.getElementById("chatmsg").value)
+            }
+        }
+
+        function addChatMsg(msb) {
+            const newChatLine = document.createElement("div")
+            const content = document.createTextNode(msb)
+            newChatLine.appendChild(content)
+            document.getElementById("msgs").append(newChatLine)
+        }
+    </script>
+</head>
+<body>
+<noscript>You need to enable JavaScript to run this app.</noscript>
+<div>
+    <input type="text" id="joinname" placeholder="enter name"/>
+    <input type="button" value="join" onclick="join()"/>
+    <input type="button" value="get name" onclick="fetchSessionName()"/>
+    <div id="sessionname"></div>
+</div>
+<br/><br/>
+<div>
+    <input type="text" id="chatmsg" placeholder="enter msg"/>
+    <input type="button" value="send" onclick="send()"/>
+</div>
+<div>messages</div>
+<div id="msgs">...</div>
+</body>
+</html>
